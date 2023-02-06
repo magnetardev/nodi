@@ -106,7 +106,7 @@ impl MarkdownFile {
     pub async fn id_from_name(name: String, conn: &mut PoolConnection<Sqlite>) -> Result<i64> {
         Ok(sqlx::query(
             r#"
-                SELECT (id) FROM Files WHERE Files.path LIKE '%/' || ? || '.md';
+                SELECT (id) FROM Files WHERE Files.path LIKE '%/' || ? || '.md' OR Files.path LIKE '%/' || ?;
                 "#,
         )
         .bind(name)
