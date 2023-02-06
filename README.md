@@ -1,5 +1,5 @@
 # Nodi
-A CLI for generating graphs between markdown files, a la Obsidian.
+A (WIP) tool for generating graphs between markdown files, a la Obsidian.
 
 ## TODO
 - [ ] Don't clear the database every run
