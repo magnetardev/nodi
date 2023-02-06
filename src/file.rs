@@ -1,5 +1,6 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use md5_rs::{Context, DIGEST_LEN, INPUT_BUFFER_LEN};
+use sqlx::{pool::PoolConnection, Row, Sqlite};
 use std::path::PathBuf;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -83,4 +84,52 @@ impl MarkdownFile {
             references,
         })
     }
+
+    pub async fn write_to_db(&self, conn: &mut PoolConnection<Sqlite>) -> Result<i64> {
+        if let Some(path) = self.path.to_str() {
+            Ok(sqlx::query(
+                r#"
+                INSERT INTO Files (path, md5)
+                VALUES (?1, ?2)
+                "#,
+            )
+            .bind(path)
+            .bind(&self.hash)
+            .execute(conn)
+            .await?
+            .last_insert_rowid())
+        } else {
+            Err(anyhow!("invalid path"))
+        }
+    }
+
+    pub async fn id_from_name(name: String, conn: &mut PoolConnection<Sqlite>) -> Result<i64> {
+        Ok(sqlx::query(
+            r#"
+                SELECT (id) FROM Files WHERE Files.path LIKE '%/' || ? || '.md';
+                "#,
+        )
+        .bind(name)
+        .fetch_one(conn)
+        .await?
+        .try_get::<i64, _>("id")?)
+    }
+}
+
+pub async fn write_reference_to_db(
+    self_id: i64,
+    target_id: i64,
+    conn: &mut PoolConnection<Sqlite>,
+) -> Result<()> {
+    sqlx::query(
+        r#"
+                INSERT INTO Relationship (src, dst)
+                VALUES (?1, ?2)
+               "#,
+    )
+    .bind(self_id)
+    .bind(target_id)
+    .execute(conn)
+    .await?;
+    Ok(())
 }
